@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #09090b;
+  --color-foreground: #fafafa;
+
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-accent: #3b82f6;
+  --color-accent-hover: #2563eb;
+}
+
+/* Custom Utilities for Premium Look */
+@layer utilities {
+  .glass {
+    background: rgba(15, 15, 20, 0.4);
+    backdrop-filter: blur(24px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.03),
+      0 20px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  .glass-card {
+    background: rgba(24, 24, 27, 0.4);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .text-gradient {
+    background: linear-gradient(to bottom right, #fff 30%, rgba(255, 255, 255, 0.5));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+:root {
+  --background: #09090b;
+  --foreground: #fafafa;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-inter), ui-sans-serif, system-ui;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
