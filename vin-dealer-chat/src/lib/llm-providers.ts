@@ -1,5 +1,6 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
+import { createCerebras } from '@ai-sdk/cerebras';
 
 // Gemini
 export const google = createGoogleGenerativeAI({
@@ -12,9 +13,8 @@ export const groq = createOpenAI({
     apiKey: process.env.GROQ_API_KEY,
 });
 
-// Cerebras (OpenAI Compatible)
-export const cerebras = createOpenAI({
-    baseURL: 'https://api.cerebras.ai/v1',
+// Cerebras (Dedicated Provider)
+export const cerebras = createCerebras({
     apiKey: process.env.CEREBRAS_API_KEY,
 });
 
@@ -29,6 +29,6 @@ export type ProviderId = 'gemini' | 'groq' | 'cerebras' | 'mimo';
 export const PROVIDERS = [
     { id: 'gemini', name: 'Gemini 1.5 Pro', model: 'gemini-1.5-pro' },
     { id: 'groq', name: 'Groq (Llama 3.1 70B)', model: 'llama-3.1-70b-versatile' },
-    { id: 'cerebras', name: 'Cerebras (Llama 3.1 70B)', model: 'llama3.1-70b' },
+    { id: 'cerebras', name: 'Cerebras (GPT-OSS 120B)', model: 'gpt-oss-120b' },
     { id: 'mimo', name: 'MiMo (Xiaomi MiMo-V2)', model: 'xiaomi/mimo-v2-flash' },
 ] as const;

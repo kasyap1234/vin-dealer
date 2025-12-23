@@ -8,21 +8,25 @@ import { Send, Car, ShieldCheck, Zap, Info, Settings2, Sparkles, ChevronRight } 
 import { PROVIDERS, ProviderId } from '@/lib/llm-providers';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 export default function ChatPage() {
-  const [selectedProvider, setSelectedProvider] = useState<ProviderId>('gemini');
+  const [selectedProvider, setSelectedProvider] = useState<ProviderId>('cerebras');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
 
   const { messages, sendMessage, status } = useChat({
     transport: new DefaultChatTransport({
       api: '/api/chat',
-      body: { providerId: selectedProvider },
     }),
+    onError: (error) => {
+      console.error('Chat error:', error);
+    },
   });
 
   const isLoading = status === 'streaming' || status === 'submitted';
@@ -37,7 +41,10 @@ export default function ChatPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputValue.trim() && !isLoading) {
-      sendMessage({ text: inputValue });
+      sendMessage(
+        { text: inputValue },
+        { body: { providerId: selectedProvider } }
+      );
       setInputValue('');
     }
   };
@@ -248,39 +255,52 @@ export default function ChatPage() {
                         {m.parts.map((part, pIdx) => (
                           <div key={pIdx} className="inline">
                             {part.type === 'text' && (
-                              <span className="inline leading-relaxed">
-                                {part.text}
+                              <div className="prose prose-invert prose-sm max-w-none prose-headings:text-white prose-headings:font-bold prose-headings:mb-3 prose-h3:text-lg prose-h3:mt-4 prose-p:text-[#d1d1d1] prose-p:leading-relaxed prose-p:my-2 prose-strong:text-white prose-strong:font-semibold prose-table:border-collapse prose-table:w-full prose-th:bg-[#1a1a1a] prose-th:border prose-th:border-[#333] prose-th:p-2 prose-th:text-left prose-th:text-[#888] prose-td:border prose-td:border-[#222] prose-td:p-2 prose-td:text-[#ccc] prose-ul:my-2 prose-li:my-0.5 prose-li:text-[#ccc] prose-code:bg-[#1a1a1a] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-blue-400">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{part.text}</ReactMarkdown>
                                 {status === 'streaming' && idx === messages.length - 1 && pIdx === m.parts.length - 1 && (
                                   <span className="inline-block w-1.5 h-4 bg-blue-500 ml-1 translate-y-0.5 animate-pulse rounded-sm" />
                                 )}
-                              </span>
+                              </div>
                             )}
 
-                            {part.type === 'tool-call' && (
+                            {/* Handle tool parts - in v6 they are typed as tool-<toolName> */}
+                            {part.type.startsWith('tool-') && (
                               <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className="my-8 p-4 rounded-xl bg-[#09090b] border border-[#ffffff0a] flex flex-col gap-3 font-mono shadow-xl relative overflow-hidden group/tool"
+                                className="my-8 p-4 rounded-xl bg-[#09090b] border border-[#ffffff0a] flex flex-col gap-3 font-mono shadow-xl relative overflow-hidden"
                               >
-                                <div className="absolute top-0 right-0 p-2 opacity-50">
-                                  <div className="w-1 h-3 bg-blue-500/50 rounded-full animate-bounce" />
-                                </div>
                                 <div className="flex items-center gap-3">
-                                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                                  <span className="text-[11px] font-bold text-blue-400 uppercase tracking-tighter">CALL mcp_audit_tool</span>
+                                  <div className={cn(
+                                    "w-2 h-2 rounded-full",
+                                    (part as any).state === 'output-available' ? "bg-emerald-500" : "bg-blue-500 animate-pulse"
+                                  )} />
+                                  <span className={cn(
+                                    "text-[11px] font-bold uppercase tracking-tighter",
+                                    (part as any).state === 'output-available' ? "text-emerald-400" : "text-blue-400"
+                                  )}>
+                                    {(part as any).state === 'output-available' ? 'RESULT READY' : 'CALLING TOOL'}
+                                  </span>
                                 </div>
                                 <div className="text-xs text-[#888] space-y-1">
-                                  <p>IDENTIFIER: <span className="text-[#eee]">{(part as any).args?.vin}</span></p>
-                                  <p className="flex items-center gap-2">STATUS: <span className="text-[#eee] animate-pulse">Running analysis...</span></p>
+                                  {(part as any).input?.vin && (
+                                    <p>VIN: <span className="text-[#eee]">{(part as any).input.vin}</span></p>
+                                  )}
+                                  {(part as any).state === 'output-available' && (part as any).output && (
+                                    <div className="mt-2 p-3 bg-[#0f0f0f] rounded-lg text-[#d1d1d1] whitespace-pre-wrap text-xs leading-relaxed">
+                                      {typeof (part as any).output === 'string' ? (part as any).output : JSON.stringify((part as any).output, null, 2)}
+                                    </div>
+                                  )}
+                                  {(part as any).state === 'output-error' && (
+                                    <p className="text-red-400">Error: {(part as any).errorText}</p>
+                                  )}
+                                  {!(part as any).state?.includes('output') && (
+                                    <p className="flex items-center gap-2">
+                                      STATUS: <span className="text-[#eee] animate-pulse">Running analysis...</span>
+                                    </p>
+                                  )}
                                 </div>
                               </motion.div>
-                            )}
-
-                            {part.type === 'tool-result' && (
-                              <div className="my-2 flex items-center gap-3 py-1.5 px-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10 w-fit">
-                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                                <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Result Validated</span>
-                              </div>
                             )}
                           </div>
                         ))}
@@ -331,9 +351,9 @@ export default function ChatPage() {
               </form>
             </motion.div>
 
-            <p className="mt-8 text-center text-[10px] text-[#444] font-medium uppercase tracking-[0.25em] flex items-center justify-center gap-3">
-              VinDealer v4.2.0 <div className="w-1 h-1 rounded-full bg-[#222]" /> Secure Inference Protocol
-            </p>
+            <span className="mt-8 text-center text-[10px] text-[#444] font-medium uppercase tracking-[0.25em] flex items-center justify-center gap-3">
+              VinDealer v4.2.0 <span className="w-1 h-1 rounded-full bg-[#222] inline-block" /> Secure Inference Protocol
+            </span>
           </div>
         </div>
       </main>
